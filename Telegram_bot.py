@@ -71,18 +71,28 @@ async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    cantidad = user_settings.get(user_id, 10) # 10 por defecto
+    cantidad = user_settings.get(user_id, 10)
     
-    if not context.args:
-        await update.message.reply_text("❌ Debes proporcionar un BIN. Ej: `.gen 4567xxxxxxx`")
-        return
-
-    # Procesar entrada: bin|mes|año|cvv
-    raw_input = context.args[0].split('|')
-    bin_pattern = raw_input[0]
-    mes = raw_input[1] if len(raw_input) > 1 and raw_input[1] != "" else "rnd"
-    ano = raw_input[2] if len(raw_input) > 2 and raw_input[2] != "" else "rnd"
-    cvv_input = raw_input[3] if len(raw_input) > 3 and raw_input[3] != "" else "rnd"
+    # Capturamos el texto completo del mensaje
+    full_text = update.message.text
+    
+    # Eliminamos el comando (.gen o /gen) y nos quedamos con el resto
+    # Esto evita que context.args falle si hay formatos extraños
+    try:
+        # Separamos por el primer espacio. Ejemplo: ".gen 1234xx" -> ["1234xx"]
+        parts = full_text.split(maxsplit=1)
+        
+        if len(parts) < 2:
+            await update.message.reply_text("❌ Debes proporcionar un BIN. Ej: `.gen 4567xxxxxxx`")
+            return
+        
+        raw_data = parts[1].strip() # Aquí queda: "434256xxxxxxxxxx|mes|año|cvv"
+        
+        input_split = raw_data.split('|')
+        bin_pattern = input_split[0].strip()
+        mes = input_split[1] if len(input_split) > 1 and input_split[1] != "" else "rnd"
+        ano = input_split[2] if len(input_split) > 2 and input_split[2] != "" else "rnd"
+        cvv_in = input_split[3] if len(input_split) > 3 and input_split[3] != "" else "rnd"
 
     msg_espera = await update.message.reply_text("⏳ Generando...")
     
