@@ -106,7 +106,7 @@ async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     # Reemplaza 'TU_TOKEN_AQUÍ' por el token que te dio @BotFather
-    app = ApplicationBuilder().token('TU_TOKEN_AQUÍ').build()
+    app = ApplicationBuilder().token('8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM').build()
     
     # Comandos con punto (.) o barra (/)
     app.add_handler(CommandHandler("cant", set_cant))
