@@ -71,49 +71,68 @@ async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    # Obtenemos la cantidad configurada por el usuario o 10 por defecto
     cantidad = user_settings.get(user_id, 10)
     
-    # Capturamos el texto completo del mensaje
+    # Obtenemos el texto completo del mensaje enviado
     full_text = update.message.text
     
-    # Eliminamos el comando (.gen o /gen) y nos quedamos con el resto
-    # Esto evita que context.args falle si hay formatos extraños
-    try:
-        # Separamos por el primer espacio. Ejemplo: ".gen 1234xx" -> ["1234xx"]
-        parts = full_text.split(maxsplit=1)
-        
-        if len(parts) < 2:
-            await update.message.reply_text("❌ Debes proporcionar un BIN. Ej: `.gen 4567xxxxxxx`")
-            return
-        
-        raw_data = parts[1].strip() # Aquí queda: "434256xxxxxxxxxx|mes|año|cvv"
-        
-        input_split = raw_data.split('|')
-        bin_pattern = input_split[0].strip()
-        mes = input_split[1] if len(input_split) > 1 and input_split[1] != "" else "rnd"
-        ano = input_split[2] if len(input_split) > 2 and input_split[2] != "" else "rnd"
-        cvv_in = input_split[3] if len(input_split) > 3 and input_split[3] != "" else "rnd"
-
-        msg_espera = await update.message.reply_text("⏳ Generando...")
-        
-        resultados = []
-        for _ in range(cantidad):
-            num = generar_luhn_fuerza_bruta(bin_pattern)
-            if num:
-                red = chk_card(num)
-                m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
-                # Año: actual + random(2,6)
-                a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
-                cvv = generar_cvv(red) if cvv_input == "rnd" else cvv_input
-                resultados.append(f"`{num}|{m}|{a}|{cvv}`")
+    # Dividimos el mensaje: el primer elemento es el comando (.gen) 
+    # y el segundo es todo lo que viene después (el BIN y los parámetros)
+    parts = full_text.split(maxsplit=1)
     
-        if resultados:
-            header = f"🔹 **BIN:** {bin_pattern}\n🔹 **Red:** {chk_card(bin_pattern)}\n🔹 **Cantidad:** {cantidad}\n\n"
-            response = header + "\n".join(resultados)
-            await msg_espera.edit_text(response, parse_mode='Markdown')
-        else:
-            await msg_espera.edit_text("❌ No se pudieron generar tarjetas válidas con ese BIN.")
+    if len(parts) < 2:
+        await update.message.reply_text("❌ Debes proporcionar un BIN.\nEjemplo: `.gen 4567xxxxxxx` o `.gen 4567xxxxxxx|05|2028|123`")
+        return
 
+    # Limpiamos los datos de entrada
+    raw_data = parts[1].strip()
+    
+    # Separamos por el carácter "|"
+    input_split = raw_data.split('|')
+    
+    # Asignación de valores (si no existen o están vacíos, se usa "rnd")
+    bin_pattern = input_split[0].strip()
+    mes = input_split[1].strip() if len(input_split) > 1 and input_split[1].strip() != "" else "rnd"
+    ano = input_split[2].strip() if len(input_split) > 2 and input_split[2].strip() != "" else "rnd"
+    cvv_in = input_split[3].strip() if len(input_split) > 3 and input_split[3].strip() != "" else "rnd"
+
+    # Mensaje visual para indicar que el bot está trabajando
+    msg_espera = await update.message.reply_text("⏳ Generando tarjetas válidas...")
+    
+    resultados = []
+    for _ in range(cantidad):
+        # IMPORTANTE: Asegúrate de que el nombre coincida con tu función: generar_luhn_fuerza_bruta
+        num = generar_luhn_fuerza_bruta(bin_pattern)
+        
+        if num:
+            red = chk_card(num)
+            
+            # Formatear Mes
+            m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
+            
+            # Formatear Año (si es rnd, genera entre +2 y +6 años)
+            if ano == "rnd":
+                a = str(datetime.now().year + random.randint(2, 6))
+            else:
+                a = ano
+                
+            # Formatear CVV
+            cvv = generar_cvv(red) if cvv_in == "rnd" else cvv_in
+            
+            # Guardamos en formato de código para que sea fácil de copiar en Telegram
+            resultados.append(f"`{num}|{m}|{a}|{cvv}`")
+
+    if resultados:
+        # Detectar la red para mostrarla en el encabezado
+        info_red = chk_card(bin_pattern)
+        header = f"💳 **BIN:** `{bin_pattern}`\n🏦 **Red:** {info_red}\n🎲 **Cantidad:** {cantidad}\n\n"
+        final_msg = header + "\n".join(resultados)
+        
+        await msg_espera.edit_text(final_msg, parse_mode='Markdown')
+    else:
+        await msg_espera.edit_text("❌ No se pudieron generar tarjetas. Verifica que el BIN sea válido o intenta con menos 'x'.")
+        
 if __name__ == '__main__':
     # Reemplaza 'TU_TOKEN_AQUÍ' por el token que te dio @BotFather
     app = ApplicationBuilder().token('8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM').build()
