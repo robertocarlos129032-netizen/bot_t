@@ -94,25 +94,25 @@ async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ano = input_split[2] if len(input_split) > 2 and input_split[2] != "" else "rnd"
         cvv_in = input_split[3] if len(input_split) > 3 and input_split[3] != "" else "rnd"
 
-    msg_espera = await update.message.reply_text("⏳ Generando...")
+        msg_espera = await update.message.reply_text("⏳ Generando...")
+        
+        resultados = []
+        for _ in range(cantidad):
+            num = generar_luhn_fuerza_bruta(bin_pattern)
+            if num:
+                red = chk_card(num)
+                m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
+                # Año: actual + random(2,6)
+                a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
+                cvv = generar_cvv(red) if cvv_input == "rnd" else cvv_input
+                resultados.append(f"`{num}|{m}|{a}|{cvv}`")
     
-    resultados = []
-    for _ in range(cantidad):
-        num = generar_luhn_fuerza_bruta(bin_pattern)
-        if num:
-            red = chk_card(num)
-            m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
-            # Año: actual + random(2,6)
-            a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
-            cvv = generar_cvv(red) if cvv_input == "rnd" else cvv_input
-            resultados.append(f"`{num}|{m}|{a}|{cvv}`")
-
-    if resultados:
-        header = f"🔹 **BIN:** {bin_pattern}\n🔹 **Red:** {chk_card(bin_pattern)}\n🔹 **Cantidad:** {cantidad}\n\n"
-        response = header + "\n".join(resultados)
-        await msg_espera.edit_text(response, parse_mode='Markdown')
-    else:
-        await msg_espera.edit_text("❌ No se pudieron generar tarjetas válidas con ese BIN.")
+        if resultados:
+            header = f"🔹 **BIN:** {bin_pattern}\n🔹 **Red:** {chk_card(bin_pattern)}\n🔹 **Cantidad:** {cantidad}\n\n"
+            response = header + "\n".join(resultados)
+            await msg_espera.edit_text(response, parse_mode='Markdown')
+        else:
+            await msg_espera.edit_text("❌ No se pudieron generar tarjetas válidas con ese BIN.")
 
 if __name__ == '__main__':
     # Reemplaza 'TU_TOKEN_AQUÍ' por el token que te dio @BotFather
