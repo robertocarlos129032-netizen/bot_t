@@ -401,7 +401,7 @@ async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     # Reemplaza con tu Token real
-    TOKEN = "8613878245:AAEMI5EnyXSKpKwxz2BB5J3mlzKzxz411DE"
+    TOKEN = "8613878245:AAGvV4lcztveZGwZ-iMIWEcgZ8sc2dzdSCY"
     app = ApplicationBuilder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
