@@ -315,9 +315,8 @@ async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await msg_espera.edit_text("❌ No se pudieron generar tarjetas. Verifica que el BIN sea válido o intenta con menos 'x'.")
 
-#NUEVAS FUNCIONES
 async def ggen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Guarda un patrón de tarjeta en la lista del usuario."""
+    """Guarda un patrón y ejecuta .gen inmediatamente."""
     user_id = update.effective_user.id
     txt = update.message.text.split(maxsplit=1)
     
@@ -331,75 +330,92 @@ async def ggen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_history[user_id].append(pattern)
     pos = len(user_history[user_id])
-    await update.message.reply_text(f"✅ Guardado en la posición **{pos}**: `{pattern}`", parse_mode='Markdown')
+    
+    await update.message.reply_text(f"✅ Guardado en posición **{pos}**. Iniciando generación...", parse_mode='Markdown')
+    
+    # Ejecuta .gen automáticamente con los mismos datos
+    update.message.text = f".gen {pattern}"
+    await gen_handler(update, context)
+
+async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Borra un elemento de la lista y reordena."""
+    user_id = update.effective_user.id
+    txt = update.message.text.split()
+
+    if len(txt) < 2:
+        await update.message.reply_text("❌ Uso: `.dep [número]`")
+        return
+
+    if user_id not in user_history or not user_history[user_id]:
+        await update.message.reply_text("❌ Tu lista ya está vacía.")
+        return
+
+    try:
+        idx = int(txt[1]) - 1
+        if 0 <= idx < len(user_history[user_id]):
+            eliminado = user_history[user_id].pop(idx)
+            await update.message.reply_text(f"🗑 Eliminado: `{eliminado}`\nLa lista ha sido reordenada.")
+        else:
+            await update.message.reply_text("❌ El número no existe en tu lista.")
+    except ValueError:
+        await update.message.reply_text("❌ Por favor usa un número válido.")
 
 async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Muestra la lista o ejecuta una tarjeta guardada por su índice."""
+    """Muestra lista o genera por índice."""
     user_id = update.effective_user.id
-    
+    txt = update.message.text.split()
+
     if user_id not in user_history or not user_history[user_id]:
-        await update.message.reply_text("❌ Tu lista está vacía.")
+        await update.message.reply_text("❌ No tienes tarjetas guardadas.")
         return
 
-    txt_parts = update.message.text.split()
-    
-    # Caso 1: .rep (Muestra la lista completa)
-    if len(txt_parts) == 1:
-        lista_msg = "🗂 **Tus tarjetas guardadas:**\n\n"
-        for i, pat in enumerate(user_history[user_id], 1):
-            lista_msg += f"{i}. `{pat}`\n"
-        lista_msg += "\nUsa `.rep [número]` para generar con una de ellas."
-        await update.message.reply_text(lista_msg, parse_mode='Markdown')
-        return
+    if len(txt) == 1:
+        # Mostrar lista completa
+        msg = "🗂 **Lista de Guardados:**\n\n"
+        for i, p in enumerate(user_history[user_id], 1):
+            msg += f"{i}. `{p}`\n"
+        await update.message.reply_text(msg, parse_mode='Markdown')
+    else:
+        # Generar por índice
+        try:
+            idx = int(txt[1]) - 1
+            if 0 <= idx < len(user_history[user_id]):
+                update.message.text = f".gen {user_history[user_id][idx]}"
+                await gen_handler(update, context)
+            else:
+                await update.message.reply_text("❌ Índice no encontrado.")
+        except ValueError:
+            await update.message.reply_text("❌ Uso: `.rep [número]`")
 
-    # Caso 2: .rep [número] (Ejecuta la generación)
-    try:
-        idx = int(txt_parts[1]) - 1
-        if 0 <= idx < len(user_history[user_id]):
-            # Simulamos el comando .gen con la tarjeta seleccionada
-            pattern_to_gen = user_history[user_id][idx]
-            # Creamos un objeto de mensaje falso para reutilizar gen_handler
-            update.message.text = f".gen {pattern_to_gen}"
-            await gen_handler(update, context)
-        else:
-            await update.message.reply_text("❌ Número fuera de rango.")
-    except ValueError:
-        await update.message.reply_text("❌ Usa un número válido. Ej: `.rep 1`")
 
-async def repu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ejecuta .gen con la última tarjeta guardada."""
-    user_id = update.effective_user.id
-    if user_id not in user_history or not user_history[user_id]:
-        await update.message.reply_text("❌ No hay tarjetas guardadas.")
-        return
-    
-    last_pattern = user_history[user_id][-1]
-    update.message.text = f".gen {last_pattern}"
-    await gen_handler(update, context)
-        
+
+
 if __name__ == '__main__':
-    # Reemplaza 'TU_TOKEN_AQUÍ' por el token que te dio @BotFather
-    app = ApplicationBuilder().token('8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM').build()
+    # Inicia Flask para Render en segundo plano
+    Thread(target=run_flask).start()
+
+    TOKEN = os.environ.get("TELEGRAM_TOKEN", "8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM")
+    app = ApplicationBuilder().token(TOKEN).build()
     
-    # Comandos con punto (.) o barra (/)
-    app.add_handler(CommandHandler("cant", set_cant))
+    # Usamos MessageHandler con Regex para capturar el punto (.) obligatoriamente
+    # Esto soluciona que el bot "no haga nada"
+    
+    # .gen
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[gG][eE][nN]'), gen_handler))
+    # .cant
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[cC][aA][nN][tT]'), set_cant))
+    # .ggen
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[gG][gG][eE][nN]'), ggen_handler))
+    # .rep
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[rR][eE][pP]'), rep_handler))
+    # .repu
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[rR][eE][pP][uU]'), repu_handler))
+    # .dep
+    app.add_handler(MessageHandler(filters.Regex(r'^\.[dD][eE][pP]'), dep_handler))
+    
+    # También añadimos CommandHandler por si usas barra (/)
     app.add_handler(CommandHandler("gen", gen_handler))
-    # Soporte para comandos que empiecen con punto de forma manual
-    app.add_handler(MessageHandler(filters.Regex(r'^\.cant'), set_cant))
-    app.add_handler(MessageHandler(filters.Regex(r'^\.gen'), gen_handler))
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cant", set_cant))
 
-    # Comandos para GGEN
-    app.add_handler(CommandHandler("ggen", ggen_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^\.ggen'), ggen_handler))
-
-    # Comandos para REP
-    app.add_handler(CommandHandler("rep", rep_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^\.rep'), rep_handler))
-
-    # Comandos para REPU
-    app.add_handler(CommandHandler("repu", repu_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^\.repu'), repu_handler))
-
-    print("Bot corriendo...")
+    print("Bot activo")
     app.run_polling()
