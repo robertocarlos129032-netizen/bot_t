@@ -10,7 +10,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-
+async def error_handler(update, context):
+    logging.error("Exception while handling an update:", exc_info=context.error)
 # --- TU BASE DE DATOS DE BINS (Simplificada para el ejemplo) ---
 BINS_DB = [
     ("37xxxxxxxxxxxxx",  "AmEx"),
@@ -201,7 +202,6 @@ BINS_DB = [
 ]
 
 # --- LÓGICA DE APOYO ---
-
 def chk_card(numero):
     numero_limpio = ''.join(c for c in str(numero) if c.isdigit())
     for patron, red in BINS_DB:
@@ -239,14 +239,13 @@ def generar_cvv(red):
     if "amex" in red.lower(): return str(random.randint(1000, 9998))
     return str(random.randint(112, 998))
 
-# --- VARIABLES DE ESTADO (En memoria) ---
+# --- VARIABLES DE ESTADO ---
 user_settings = {}
 user_history = {}
 
 # --- PROCESADOR CENTRAL ---
 
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
-    """Genera las tarjetas basándose en el string proporcionado."""
     user_id = update.effective_user.id
     cantidad = user_settings.get(user_id, 10)
     
@@ -264,7 +263,6 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
         if num:
             red = chk_card(num)
             m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
-            # Año: actual + 2 a 6 años si es rnd
             a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
             cvv = generar_cvv(red) if cvv_in == "rnd" else cvv_in
             resultados.append(f"`{num}|{m}|{a}|{cvv}`")
@@ -274,56 +272,35 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
         header = f"💳 **BIN:** `{bin_pattern}`\n🏦 **Red:** {info_red}\n🎲 **Cant:** {cantidad}\n\n"
         await msg_espera.edit_text(header + "\n".join(resultados), parse_mode='Markdown')
     else:
-        await msg_espera.edit_text("❌ No se pudieron generar tarjetas. Verifica el BIN.")
+        await msg_espera.edit_text("❌ No se pudieron generar tarjetas.")
 
 # --- HANDLERS ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🤖 **Bot de Generación**\n\n"
-        "`.cant [n]` - Cantidad de tarjetas\n"
-        "`.gen [bin]` - Generar (Ej: .gen 4567xxxx)\n"
-        "`.ggen [bin]` - Guardar y Generar\n"
-        "`.rep` - Ver historial / `.rep [n]` - Generar de historial\n"
-        "`.repu` - Generar último guardado\n"
-        "`.dep [n]` - Eliminar del historial"
-    )
+    await update.message.reply_text("🤖 Bot Activo.\nUsa `.gen`, `.ggen`, `.rep`, `.repu` o `.cant`.")
 
 async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
         parts = update.message.text.split()
-        if len(parts) < 2: raise ValueError
         nueva_cant = int(parts[1])
         user_settings[user_id] = nueva_cant
-        await update.message.reply_text(f"✅ Cantidad configurada en: **{nueva_cant}**", parse_mode='Markdown')
-    except (IndexError, ValueError):
+        await update.message.reply_text(f"✅ Cantidad: **{nueva_cant}**", parse_mode='Markdown')
+    except:
         await update.message.reply_text("❌ Uso: `.cant 15`")
 
 async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = update.message.text.split(maxsplit=1)
-    if len(parts) < 2:
-        await update.message.reply_text("❌ Falta el BIN. Ej: `.gen 4567xxxxxxxxxxxx`")
-        return
+    if len(parts) < 2: return
     await ejecutar_generacion(update, context, parts[1])
 
 async def ggen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Guarda el BIN en el historial y lo ejecuta inmediatamente."""
     user_id = update.effective_user.id
     parts = update.message.text.split(maxsplit=1)
-    
-    if len(parts) < 2:
-        await update.message.reply_text("❌ Uso: `.ggen bin|mes|año|cvv`")
-        return
-
+    if len(parts) < 2: return
     pattern = parts[1].strip()
-    # Guardar en historial
-    if user_id not in user_history:
-        user_history[user_id] = []
-    user_history[user_id].append(pattern)
-    
-    # Notificar y ejecutar
-    await update.message.reply_text(f"📥 Guardado en posición **{len(user_history[user_id])}**.")
+    user_history.setdefault(user_id, []).append(pattern)
+    await update.message.reply_text(f"📥 Guardado en #{len(user_history[user_id])}")
     await ejecutar_generacion(update, context, pattern)
 
 async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -332,62 +309,50 @@ async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = update.message.text.split()
 
     if not history:
-        await update.message.reply_text("❌ No tienes BINS guardados.")
+        await update.message.reply_text("❌ Historial vacío.")
         return
 
     if len(parts) == 1:
-        # Mostrar la lista
         lista = [f"{i+1}. `{p}`" for i, p in enumerate(history)]
-        await update.message.reply_text("🗂 **Tu Historial:**\n\n" + "\n".join(lista), parse_mode='Markdown')
+        await update.message.reply_text("🗂 **Historial:**\n" + "\n".join(lista), parse_mode='Markdown')
     else:
-        # Ejecutar un índice específico
         try:
             idx = int(parts[1]) - 1
-            if 0 <= idx < len(history):
-                await ejecutar_generacion(update, context, history[idx])
-            else:
-                await update.message.reply_text("❌ El número no está en la lista.")
-        except ValueError:
-            await update.message.reply_text("❌ Uso: `.rep [número]`")
+            await ejecutar_generacion(update, context, history[idx])
+        except:
+            await update.message.reply_text("❌ Índice inválido.")
 
 async def repu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Genera usando el último BIN del historial."""
     user_id = update.effective_user.id
     history = user_history.get(user_id, [])
     if not history:
-        await update.message.reply_text("❌ Tu historial está vacío.")
+        await update.message.reply_text("❌ Nada guardado.")
         return
-    
+    # Ejecuta directamente el último sin mostrar la lista
     await ejecutar_generacion(update, context, history[-1])
 
 async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     parts = update.message.text.split()
-    if len(parts) < 2 or user_id not in user_history:
-        await update.message.reply_text("❌ Indica el número a borrar. Ej: `.dep 1`")
-        return
     try:
         idx = int(parts[1]) - 1
         eliminado = user_history[user_id].pop(idx)
         await update.message.reply_text(f"🗑 Eliminado: `{eliminado}`")
     except:
-        await update.message.reply_text("❌ Índice no encontrado.")
+        await update.message.reply_text("❌ Error al eliminar.")
 
 if __name__ == '__main__':
-    # Token de BotFather
     TOKEN = "8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM"
-    
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # Handlers con Regex para soportar el punto (.)
+    # ORDEN CRÍTICO: Los comandos más específicos van primero
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler)) # .repu primero
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))   # .rep después
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]gen$'), gen_handler)) # Evita .gen solo
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]gen '), gen_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
-
-    print("Bot corriendo...")
+    app.add_error_handler(error_handler)
+    print("Bot activo")
     app.run_polling()
