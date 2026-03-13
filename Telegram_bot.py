@@ -2,10 +2,22 @@ import os
 import random
 import logging
 from datetime import datetime
-from threading import Thread  
-from flask import Flask      
+from threading import Thread
+from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
+
+# --- CONFIGURACIÓN PARA RENDER ---
+app_flask = Flask('')
+
+@app_flask.route('/')
+def home():
+    return "Bot is online"
+
+def run_flask():
+    # Render asigna un puerto dinámico en la variable PORT
+    port = int(os.environ.get("PORT", 8080))
+    app_flask.run(host='0.0.0.0', port=port)
 
 # --- TU BASE DE DATOS DE BINS (Simplificada para el ejemplo) ---
 BINS_DB = [
