@@ -202,6 +202,11 @@ BINS_DB = [
 ]
 
 # --- LÓGICA DE APOYO ---
+user_settings = {}
+user_history = {}
+
+# --- LÓGICA DE APOYO ---
+
 def chk_card(numero):
     numero_limpio = ''.join(c for c in str(numero) if c.isdigit())
     for patron, red in BINS_DB:
@@ -239,11 +244,37 @@ def generar_cvv(red):
     if "amex" in red.lower(): return str(random.randint(1000, 9998))
     return str(random.randint(112, 998))
 
-# --- VARIABLES DE ESTADO ---
-user_settings = {}
-user_history = {}
+# --- PROCESADOR DE CHECKER ---
 
-# --- PROCESADOR CENTRAL ---
+async def chk_logic(update: Update, tarjetas: list):
+    if not tarjetas: return
+    
+    msg_status = await update.message.reply_text(f"🔍 Revisando {len(tarjetas)} tarjetas...")
+    
+    lives, dead, unknown = [], [], []
+    url = "https://ke1.be/en/checker2/api.php"
+
+    for cc in tarjetas:
+        try:
+            r = requests.post(url, data={"data": cc}, timeout=10)
+            res_text = r.text
+            if len(res_text) > 9:
+                status_code = res_text[9]
+                if status_code == '2': lives.append(f"✅ `{cc}` — {res_text[59:87]}")
+                elif status_code == '1': dead.append(f"❌ `{cc}` — {res_text[60:88]}")
+                elif status_code == '3': unknown.append(f"❓ `{cc}` — {res_text[63:91]}")
+        except: unknown.append(f"⚠️ `{cc}` — Error API")
+
+    if lives: await update.message.reply_text("🟢 **LIVE**\n\n" + "\n".join(lives), parse_mode='Markdown')
+    if unknown: await update.message.reply_text("🟡 **DESCONOCIDO**\n\n" + "\n".join(unknown), parse_mode='Markdown')
+    if dead:
+        dead_msg = "🔴 **RECHAZADAS**\n\n" + "\n".join(dead)
+        if len(dead_msg) > 4000: await update.message.reply_text(f"🔴 **RECHAZADAS**: {len(dead)} tarjetas.")
+        else: await update.message.reply_text(dead_msg, parse_mode='Markdown')
+    
+    await msg_status.delete()
+
+# --- PROCESADOR DE GENERACIÓN ---
 
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
@@ -257,7 +288,7 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     msg_espera = await update.message.reply_text("⏳ Generando...")
     
-    resultados = []
+    lista_generada = []
     for _ in range(cantidad):
         num = generar_luhn_fuerza_bruta(bin_pattern)
         if num:
@@ -265,43 +296,17 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
             m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
             a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
             cvv = generar_cvv(red) if cvv_in == "rnd" else cvv_in
-            resultados.append(f"`{num}|{m}|{a}|{cvv}`")
+            lista_generada.append(f"{num}|{m}|{a}|{cvv}")
 
-    if resultados:
+    if lista_generada:
         info_red = chk_card(bin_pattern)
         header = f"💳 **BIN:** `{bin_pattern}`\n🏦 **Red:** {info_red}\n🎲 **Cant:** {cantidad}\n\n"
-        await msg_espera.edit_text(header + "\n".join(resultados), parse_mode='Markdown')
+        await msg_espera.edit_text(header + "\n".join([f"`{c}`" for c in lista_generada]), parse_mode='Markdown')
+        await chk_logic(update, lista_generada)
     else:
-        await msg_espera.edit_text("❌ No se pudieron generar tarjetas.")
+        await msg_espera.edit_text("❌ Error en generación.")
 
 # --- HANDLERS ---
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot Activo.\nUsa `.gen`, `.ggen`, `.rep`, `.repu` o `.cant`.")
-
-async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    try:
-        parts = update.message.text.split()
-        nueva_cant = int(parts[1])
-        user_settings[user_id] = nueva_cant
-        await update.message.reply_text(f"✅ Cantidad: **{nueva_cant}**", parse_mode='Markdown')
-    except:
-        await update.message.reply_text("❌ Uso: `.cant 15`")
-
-async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    parts = update.message.text.split(maxsplit=1)
-    if len(parts) < 2: return
-    await ejecutar_generacion(update, context, parts[1])
-
-async def ggen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    parts = update.message.text.split(maxsplit=1)
-    if len(parts) < 2: return
-    pattern = parts[1].strip()
-    user_history.setdefault(user_id, []).append(pattern)
-    await update.message.reply_text(f"📥 Guardado en #{len(user_history[user_id])}")
-    await ejecutar_generacion(update, context, pattern)
 
 async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -312,47 +317,64 @@ async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Historial vacío.")
         return
 
+    # Si solo escribe .rep (sin número), muestra la lista
     if len(parts) == 1:
         lista = [f"{i+1}. `{p}`" for i, p in enumerate(history)]
-        await update.message.reply_text("🗂 **Historial:**\n" + "\n".join(lista), parse_mode='Markdown')
+        await update.message.reply_text("🗂 **Tu Historial:**\n\n" + "\n".join(lista), parse_mode='Markdown')
     else:
+        # Si escribe .rep 1, genera y chkea ese BIN
         try:
             idx = int(parts[1]) - 1
-            await ejecutar_generacion(update, context, history[idx])
-        except:
-            await update.message.reply_text("❌ Índice inválido.")
+            if 0 <= idx < len(history):
+                await ejecutar_generacion(update, context, history[idx])
+            else:
+                await update.message.reply_text("❌ El número no está en la lista.")
+        except ValueError:
+            await update.message.reply_text("❌ Uso: `.rep [número]`")
+
+async def chk_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tarjetas = re.findall(r'\d{15,16}\|\d{2}\|\d{2,4}\|\d{3,4}', update.message.text)
+    if not tarjetas:
+        await update.message.reply_text("❌ Formato: `.chk cc|mes|año|cvv`")
+        return
+    await chk_logic(update, tarjetas)
+
+async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        nueva_cant = int(update.message.text.split()[1])
+        user_settings[update.effective_user.id] = nueva_cant
+        await update.message.reply_text(f"✅ Cantidad: {nueva_cant}")
+    except: pass
+
+async def gen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    parts = update.message.text.split(maxsplit=1)
+    if len(parts) >= 2: await ejecutar_generacion(update, context, parts[1])
+
+async def ggen_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    parts = update.message.text.split(maxsplit=1)
+    if len(parts) >= 2:
+        pattern = parts[1].strip()
+        user_history.setdefault(user_id, []).append(pattern)
+        await update.message.reply_text(f"📥 Guardado en #{len(user_history[user_id])}")
+        await ejecutar_generacion(update, context, pattern)
 
 async def repu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    history = user_history.get(user_id, [])
-    if not history:
-        await update.message.reply_text("❌ Nada guardado.")
-        return
-    # Ejecuta directamente el último sin mostrar la lista
-    await ejecutar_generacion(update, context, history[-1])
-
-async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    parts = update.message.text.split()
-    try:
-        idx = int(parts[1]) - 1
-        eliminado = user_history[user_id].pop(idx)
-        await update.message.reply_text(f"🗑 Eliminado: `{eliminado}`")
-    except:
-        await update.message.reply_text("❌ Error al eliminar.")
+    history = user_history.get(update.effective_user.id, [])
+    if history: await ejecutar_generacion(update, context, history[-1])
 
 if __name__ == '__main__':
     TOKEN = "8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM"
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # ORDEN CRÍTICO: Los comandos más específicos van primero
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler)) # .repu primero
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))   # .rep después
+    # IMPORTANTE: repu va antes que rep
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]chk'), chk_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
+    app.add_handler(CommandHandler("start", lambda u, c: u.message.reply_text("Bot Listo")))
     app.add_error_handler(error_handler)
-    print("Bot activo")
+    print("Bot completo")
     app.run_polling()
