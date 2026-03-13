@@ -388,7 +388,16 @@ async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             await update.message.reply_text("❌ Uso: `.rep [número]`")
 
-
+async def repu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ejecuta .gen con la última tarjeta guardada."""
+    user_id = update.effective_user.id
+    if user_id not in user_history or not user_history[user_id]:
+        await update.message.reply_text("❌ No hay tarjetas guardadas.")
+        return
+    
+    last_pattern = user_history[user_id][-1]
+    update.message.text = f".gen {last_pattern}"
+    await gen_handler(update, context)
 
 
 if __name__ == '__main__':
