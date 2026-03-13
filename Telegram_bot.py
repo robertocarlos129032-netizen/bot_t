@@ -2,22 +2,8 @@ import os
 import random
 import logging
 from datetime import datetime
-from threading import Thread
-from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
-
-# --- CONFIGURACIÓN PARA RENDER ---
-app_flask = Flask('')
-
-@app_flask.route('/')
-def home():
-    return "Bot is online"
-
-def run_flask():
-    # Render asigna un puerto dinámico en la variable PORT
-    port = int(os.environ.get("PORT", 8080))
-    app_flask.run(host='0.0.0.0', port=port)
 
 # --- TU BASE DE DATOS DE BINS (Simplificada para el ejemplo) ---
 BINS_DB = [
@@ -406,31 +392,31 @@ async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 if __name__ == '__main__':
-    # Inicia Flask para Render en segundo plano
-    Thread(target=run_flask).start()
-
-    TOKEN = os.environ.get("TELEGRAM_TOKEN", "8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM")
-    app = ApplicationBuilder().token(TOKEN).build()
+    # Reemplaza 'TU_TOKEN_AQUÍ' por el token que te dio @BotFather
+    app = ApplicationBuilder().token('8613878245:AAE8TDDKY5H1qCg6l5PsaP62ySvGROrZMGM').build()
     
-    # Usamos MessageHandler con Regex para capturar el punto (.) obligatoriamente
-    # Esto soluciona que el bot "no haga nada"
-    
-    # .gen
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[gG][eE][nN]'), gen_handler))
-    # .cant
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[cC][aA][nN][tT]'), set_cant))
-    # .ggen
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[gG][gG][eE][nN]'), ggen_handler))
-    # .rep
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[rR][eE][pP]'), rep_handler))
-    # .repu
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[rR][eE][pP][uU]'), repu_handler))
-    # .dep
-    app.add_handler(MessageHandler(filters.Regex(r'^\.[dD][eE][pP]'), dep_handler))
-    
-    # También añadimos CommandHandler por si usas barra (/)
-    app.add_handler(CommandHandler("gen", gen_handler))
+    # Comandos con punto (.) o barra (/)
     app.add_handler(CommandHandler("cant", set_cant))
+    app.add_handler(CommandHandler("gen", gen_handler))
+    # Soporte para comandos que empiecen con punto de forma manual
+    app.add_handler(MessageHandler(filters.Regex(r'^\.cant'), set_cant))
+    app.add_handler(MessageHandler(filters.Regex(r'^\.gen'), gen_handler))
+    app.add_handler(CommandHandler("start", start))
 
-    print("Bot activo")
+    # Comandos para GGEN
+    app.add_handler(CommandHandler("ggen", ggen_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^\.ggen'), ggen_handler))
+
+    # Comandos para REP
+    app.add_handler(CommandHandler("rep", rep_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^\.rep'), rep_handler))
+
+    # Comandos para REPU
+    app.add_handler(CommandHandler("repu", repu_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^\.repu'), repu_handler))
+
+    app.add_handler(CommandHandler("dep", rep_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^\.dep'), dep_handler))
+
+    print("Bot corriendo...")
     app.run_polling()
