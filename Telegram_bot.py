@@ -299,7 +299,7 @@ async def chk_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         resultados = []
         for card in found:
-            status, info = api_checker_mejorado(card, session) # Pasar la sesión
+            status, info = api_checker(card, session) # Pasar la sesión
             icono = "✅" if status == "LIVE" else "❌" if status == "RECHAZADO" else "⚠️"
             resultados.append(f"{icono} `{card}` -> {info}")
 
