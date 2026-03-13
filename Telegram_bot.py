@@ -1,10 +1,11 @@
 import os
 import random
 import logging
+import requests
+import re
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
-
 # Configuración de Logging para ver errores en Render
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
