@@ -25,7 +25,7 @@ BINS_DB = [
     ("60xxxxxxxxxxxxxx", "Discover"),
 ]
 
-# --- LÓGICA DE APOYO (ORIGINAL) ---
+# --- LÓGICA DE APOYO ---
 
 def chk_card(numero):
     numero_limpio = ''.join(c for c in str(numero) if c.isdigit())
@@ -64,10 +64,10 @@ def generar_cvv(red):
     if "amex" in red.lower(): return str(random.randint(1000, 9998))
     return str(random.randint(112, 998))
 
-# --- LÓGICA DE EXTRACCIÓN (XTP) ---
+# --- LÓGICA XTP (EXTRACCIÓN) ---
 
-def calcular_logicas(cc1, cc2):
-    # --- Lógica XTP 1 ---
+def calcular_logicas_xtp(cc1, cc2):
+    # --- XTP 1 ---
     cc_edit = []
     for x in [cc1, cc2]:
         lista = list(x)
@@ -85,7 +85,7 @@ def calcular_logicas(cc1, cc2):
     xtp1 = str(cc_edit[0])[:8] + str(res1)
     xtp1 = xtp1 + ('x' * (len(cc1) - len(xtp1)))
 
-    # --- Lógica XTP 2 ---
+    # --- XTP 2 ---
     try:
         res_list = [int(a) * int(b) for a, b in zip(cc2[8:], cc2[:8])]
         res2_str = "".join(str(x) for x in res_list)
@@ -99,7 +99,7 @@ def calcular_logicas(cc1, cc2):
                 xtp2_list[i] = 'x'
         xtp2 = "".join(xtp2_list)
     except:
-        xtp2 = "Error_en_calculo"
+        xtp2 = "Error_Cualitativo"
     
     return xtp1, xtp2
 
@@ -107,7 +107,7 @@ def calcular_logicas(cc1, cc2):
 user_settings = {}
 user_history = {}
 
-# --- PROCESADORES CENTRALES ---
+# --- PROCESADORES ---
 
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
@@ -140,54 +140,62 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- HANDLERS ---
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🤖 Bot Activo.\nUsa `.gen`, `.xtr`, `.rep`, `.repu` o `.cant`.")
+
 async def xtr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    raw_text = update.message.text
-    # Extraer solo los números de 15 o 16 dígitos (posibles tarjetas)
-    import re
-    # Buscamos bloques de números largos (ignorando separadores | / etc)
-    all_numbers = re.findall(r'\b\d{15,16}\b', raw_text)
+    parts = update.message.text.split(maxsplit=1)
+    if len(parts) < 2:
+        await update.message.reply_text("❌ Formato: `.xtr 1234..|01|25|123 1234..|01|25|123...`")
+        return
     
-    if len(all_numbers) < 2:
-        await update.message.reply_text("❌ Se requieren al menos 2 tarjetas para extraer.")
+    raw_text = parts[1]
+    # Extraer solo los números de tarjeta (primeros 15-16 dígitos de cada bloque separado por |)
+    temp_list = raw_text.replace('\n', ' ').split('|')
+    lista_cc = []
+    
+    # Re-limpiar: el primer elemento es un CC, los del medio terminan en CC y empiezan con CVV/Fecha
+    # Usaremos una limpieza más simple basada en longitud:
+    cleaned_data = "".join([c if c.isdigit() or c == ' ' else ' ' for c in raw_text]).split()
+    for item in cleaned_data:
+        if len(item) >= 15:
+            lista_cc.append(item)
+
+    if len(lista_cc) < 2:
+        await update.message.reply_text("❌ Se necesitan al menos 2 CC válidas para comparar.")
         return
 
-    msg_espera = await update.message.reply_text(f"🔍 Analizando {len(all_numbers)} CCs...")
-    
-    resultados_xtp1 = []
-    resultados_xtp2 = []
-    origen_xtp1 = {}
-    origen_xtp2 = {}
+    msg_analizando = await update.message.reply_text(f"🔍 Analizando {len(lista_cc)} tarjetas...")
 
-    combinaciones = list(permutations(all_numbers, 2))
+    res_xtp1, res_xtp2 = [], []
+    origen_xtp1, origen_xtp2 = {}, {}
 
+    combinaciones = list(permutations(lista_cc, 2))
     for c1, c2 in combinaciones:
-        x1, x2 = calcular_logicas(c1, c2)
-        
-        resultados_xtp1.append(x1)
-        if x1 not in origen_xtp1: origen_xtp1[x1] = (c1, c2)
-            
-        resultados_xtp2.append(x2)
-        if x2 not in origen_xtp2: origen_xtp2[x2] = (c1, c2)
+        x1, x2 = calcular_logicas_xtp(c1, c2)
+        res_xtp1.append(x1)
+        if x1 not in origen_xtp1: origen_xtp1[x1] = (c1[-4:], c2[-4:])
+        res_xtp2.append(x2)
+        if x2 not in origen_xtp2: origen_xtp2[x2] = (c1[-4:], c2[-4:])
 
-    def build_top_text(titulo, emoji, lista_res, mapa_origen):
-        conteo = Counter(lista_res)
-        tops = conteo.most_common(10)
-        txt = f"{emoji} **{titulo}**\n`RESULTADO           | REP | GEN` \n"
-        for res, veces in tops:
-            c1, c2 = mapa_origen.get(res)
-            # Acortar origen para que quepa en pantalla de Telegram
-            txt += f"`{res:<18} | {veces:<3} | {c1[-4:]}&{c2[-4:]}`\n"
-        return txt
+    # Formatear Top 10 XTP 1
+    top1 = Counter(res_xtp1).most_common(10)
+    txt_xtp1 = "🔥 **XTP 1**\n"
+    for i, (res, veces) in enumerate(top1, 1):
+        c1, c2 = origen_xtp1[res]
+        txt_xtp1 += f"{i}. `{res}`\n"
+        txt_xtp1 += f"  ` (Rep: {veces}) ({c1} & {c2}) `\n"
 
-    res_final = f"🧪 **EXTRACCIÓN COMPLETADA**\n"
-    res_final += f"Permutaciones: {len(combinaciones)}\n\n"
-    res_final += build_top_text("RANKING XTP 1", "🟦", resultados_xtp1, origen_xtp1)
-    res_final += "\n" + build_top_text("RANKING XTP 2", "🟩", resultados_xtp2, origen_xtp2)
+    # Formatear Top 10 XTP 2
+    top2 = Counter(res_xtp2).most_common(10)
+    txt_xtp2 = "\n🔥 **XTP 2**\n"
+    for i, (res, veces) in enumerate(top2, 1):
+        c1, c2 = origen_xtp2[res]
+        txt_xtp2 += f"{i}. `{res}`\n"
+        txt_xtp2 += f"  ` (Rep: {veces}) ({c1} & {c2}) `\n"
 
-    await msg_espera.edit_text(res_final, parse_mode='Markdown')
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot Activo.\nComandos: `.gen`, `.ggen`, `.rep`, `.repu`, `.cant`, `.xtr`, `.dep`.")
+    final_msg = f"✅ **Extracción Finalizada** ({len(combinaciones)} perms)\n\n" + txt_xtp1 + txt_xtp2
+    await msg_analizando.edit_text(final_msg, parse_mode='Markdown')
 
 async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -249,8 +257,6 @@ async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"🗑 Eliminado: `{eliminado}`")
     except:
         await update.message.reply_text("❌ Error al eliminar.")
-
-# Lista de links que quieres mostrar
 LINKS = [
     "https://asociar.qzz.io/",
     "https://elit3signal.com/",
@@ -264,8 +270,8 @@ async def send_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"🔗 Aquí tienes los links:\n\n{links_text}"
         )
+
 if __name__ == '__main__':
-    # Reemplaza con tu TOKEN real
     TOKEN = "8613878245:AAGvV4lcztveZGwZ-iMIWEcgZ8sc2dzdSCY"
     app = ApplicationBuilder().token(TOKEN).build()
     
@@ -275,10 +281,9 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler)) # NUEVO COMANDO
     app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_links))
     app.add_error_handler(error_handler)
-    
-    print("Bot ACTIVO")
+    print("Bot ACTIVO con XTP")
     app.run_polling()
