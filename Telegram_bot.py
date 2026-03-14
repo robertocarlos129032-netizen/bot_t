@@ -20,193 +20,12 @@ async def error_handler(update, context):
 # --- BASE DE DATOS DE BINS ---
 BINS_DB = [
     ("37xxxxxxxxxxxxx",  "AmEx"),
-    ("3782xxxxxxxxxx",   "AmEx Small Corporate Card"),
-    ("3787xxxxxxxxxx",   "AmEx Small Corporate Card"),
-    ("37x8xxxxxxxxxx",   "AmEx Gold"),
-    ("37x37xxxxxxxxx",   "AmEx Platinum"),
-    ("37xxxxxxxxx11xx",  "AmEx issued since 1995"),
-    ("30xxxxxxxxxxxxxx", "Diners Club"),
-    ("31xxxxxxxxxxxxxx", "Diners Club"),
-    ("35xxxxxxxxxxxxxx", "Diners Club"),
-    ("36xxxxxxxxxxxxxx", "Diners Club"),
-    ("38xxxxxxxxxxxxxx", "Carte Blanche"),
-    ("35xxxxxxxxxxxxxxx","JCB (Japanese Credit Bureau)"),
-    ("400314xxxxxxxxxx", "Visa Debit-Banca Monte Dei Paschi Di Siena (Italy)"),
-    ("400315xxxxxxxxxx", "Visa-Banca Monte Dei Paschi Di Siena (Italy)"),
-    ("4024023xxxxxxxxx","Visa Gold-Bank of America"),
-    ("4019xxxxxxxxxxxx", "Visa CV/Gold-Bank of America"),
-    ("4024xxxxxxxxxxxx", "Visa PV-Bank of America"),
-    ("4040xxxxxxxxxxxx", "Visa CV-Wells Fargo"),
-    ("4048xxxxxxxxxxxx", "Visa CV"),
-    ("402400710xxxxxxx","Visa-Wells Fargo"),
-    ("4013xxxxxxxxxxxx", "Visa-Citibank"),
-    ("4013xxxxxxxxxxxx", "Visa-Bank of America"),
-    ("402360xxxxxxxxxx", "Visa Electron Prepaid-Postale Italiane (Italy)"),
-    ("4027xxxxxxxxxxxx", "Visa-Rockwell Federal Credit Union"),
-    ("4032xxxxxxxxxxxx", "Visa-Household Bank"),
-    ("4052xxxxxxxxxxxx", "Visa-First Cincinnati"),
-    ("4060xxxxxxxxxxxx", "Visa-Associates National Bank"),
-    ("4070xxxxxxxxxxxx", "Visa-Security Pacific"),
-    ("4071xxxxxxxxxxxx", "Visa-Colonial National Bank"),
-    ("4094xxxxxxxxxxxx", "Visa-A.M.C. Federal Credit Union"),
-    ("4113xxxxxxxxxxxx", "Visa-Valley National Bank"),
-    ("4114xxxxxxxxxxxx", "Visa-Chemical Bank"),
-    ("4121xxxxxxxxxxxx", "Visa-Pennsylvania State Employees Credit Union"),
-    ("4121xxxxxxxxxxxx", "Visa CV-Signet Bank"),
-    ("4122xxxxxxxxxxxx", "Visa-Union Trust"),
-    ("4125xxxxxxxxxxxx", "Visa-Marine Midland"),
-    ("4128xxxxxxxxx",    "Visa CV-Citibank"),
-    ("4128xxxxxxxxxxxx", "Visa-Citibank/Citicorp"),
-    ("4131xxxxxxxxxxxx", "Visa-State Street Bank"),
-    ("4225xxxxxxxxxxxx", "Visa-Chase Manhattan Bank"),
-    ("4226xxxxxxxxxxxx", "Visa-Chase Manhattan Bank"),
-    ("4231xxxxxxxxxxxx", "Visa-Chase Lincoln First Classic"),
-    ("4232xxxxxxxxxxxx", "Visa-Chase Lincoln First Classic"),
-    ("4239xxxxxxxxxxxx", "Visa-Corestates"),
-    ("4241xxxxxxxxxxxx", "Visa-National Westminster Bank"),
-    ("4250xxxxxxxxxxxx", "Visa-First Chicago Bank"),
-    ("4253xxxxxxxxxxxx", "Visa-Consumers Edge"),
-    ("425451230xxxxxxx","Visa Premier card-Security First"),
-    ("4254xxxxxxxxxxxx", "Visa-Security First"),
-    ("4271382xxxxxxxxx","Visa PV-Citibank"),
-    ("4271xxxxxxxxxxxx", "Visa-Citibank/Citicorp"),
-    ("4301xxxxxxxxxxxx", "Visa-Monogram Bank"),
-    ("4302xxxxxxxxxxxx", "Visa-H.H.B.C."),
-    ("4311xxxxxxxxxxxx", "Visa-First National Bank of Louisville"),
-    ("4317xxxxxxxxxxxx", "Visa-Gold Dome"),
-    ("4327xxxxxxxxxxxx", "Visa-First Atlanta"),
-    ("4332xxxxxxxxxxxx", "Visa-First American Bank"),
-    ("4339xxxxxxxxxxxx", "Visa-Primerica Bank"),
-    ("4342xxxxxxxxxxxx", "Visa-N.C.M.B. / Nations Bank"),
-    ("4356xxxxxxxxxxxx", "Visa-National Bank of Delaware"),
-    ("4368xxxxxxxxxxxx", "Visa-National West"),
-    ("4387xxxxxxxxxxxx", "Visa-Bank One"),
-    ("4388xxxxxxxxxxxx", "Visa-First Signature Bank & Trust"),
-    ("4401xxxxxxxxxxxx", "Visa-Gary-Wheaton Bank"),
-    ("4413xxxxxxxxxxxx", "Visa-Firstier Bank Lincoln"),
-    ("4418xxxxxxxxxxxx", "Visa-Bank of Omaha"),
-    ("4421xxxxxxxxxxxx", "Visa-Indiana National Bank"),
-    ("4424xxxxxxxxxxxx", "Visa-Security Pacific National Bank"),
-    ("4428xxxxxxxxxxxx", "Visa-Bank of Hoven"),
-    ("4436xxxxxxxxxxxx", "Visa-Security Bank & Trust"),
-    ("4443xxxxxxxxxxxx", "Visa-Merrill Lynch Bank & Trust"),
-    ("4447xxxxxxxxxxxx", "Visa-AmeriTrust"),
-    ("444802xxxxxxxxx", "Visa Premier card"),
-    ("4452xxxxxxxxxxxx", "Visa-Empire Affiliates Federal Credit Union"),
-    ("4498xxxxxxxxxxxx", "Visa-Republic Savings"),
-    ("4502xxxxxxxxxxxx", "Visa-C.I.B.C."),
-    ("4503xxxxxxxxxxxx", "Visa-Canadian Imperial Bank"),
-    ("4506xxxxxxxxxxxx", "Visa-Belgium A.S.L.K."),
-    ("4510xxxxxxxxxxxx", "Visa-Royal Bank of Canada"),
-    ("4520xxxxxxxxxxxx", "Visa-Toronto Dominion of Canada"),
-    ("4537xxxxxxxxxxxx", "Visa-Bank of Nova Scotia"),
-    ("4538xxxxxxxxxxxx", "Visa-Barclays (UK)"),
-    ("4539xxxxxxxxxxxx", "Visa-Barclays (UK)"),
-    ("4543xxxxxxxxxxxx", "Visa-First Direct"),
-    ("4544xxxxxxxxxxxx", "Visa-T.S.B. Bank"),
-    ("4556xxxxxxxxxxxx", "Visa-T.S.B. Bank"),
-    ("4564xxxxxxxxxxxx", "Visa-Bank of Queensland"),
-    ("4673xxxxxxxxxxxx", "Visa-First Card"),
-    ("4678xxxxxxxxxxxx", "Visa-Home Federal"),
-    ("4707xxxxxxxxxxxx", "Visa-Tompkins County Trust"),
-    ("471212500xxxxxxx","Visa-IBM Credit Union"),
-    ("4719xxxxxxxxxxxx", "Visa-Rocky Mountain"),
-    ("4721xxxxxxxxxxxx", "Visa-First Security"),
-    ("4722xxxxxxxxxxxx", "Visa-West Bank"),
-    ("4726xxxxxxxxxxxx", "Visa-West Bank"),
-    ("4783xxxxxxxxxxxx", "Visa-AT&T's Universal Card"),
-    ("4784xxxxxxxxxxxx", "Visa-AT&T's Universal Card"),
-    ("4800xxxxxxxxxxxx", "Visa-M.B.N.A. North America"),
-    ("4811xxxxxxxxxxxx", "Visa-Bank of Hawaii"),
-    ("4819xxxxxxxxxxxx", "Visa-Macom Federal Credit Union"),
-    ("4820xxxxxxxxxxxx", "Visa-IBM Mid America Federal Credit Union"),
-    ("4833xxxxxxxxxxxx", "Visa-U.S. Bank"),
-    ("4842xxxxxxxxxxxx", "Visa-Security Pacific Washington"),
-    ("4897xxxxxxxxxxxx", "Visa-Village Bank of Chicago"),
-    ("4921xxxxxxxxxxxx", "Visa-Hong Kong National Bank"),
-    ("4929xxxxxxxxxxxx", "Visa CV-Barclays Card (UK)"),
-    ("453997100xxxxxxx","Visa-Banco di Napoli (Italy)"),
-    ("4557xxxxxxxxxxxx", "Visa-BNL (Italy)"),
-    ("4908xxxxxxxxxxxx", "Visa-Carta Moneta-CARIPLO/Intesa (Italy)"),
-    ("4xxx9x604015xxxx","Visa-Carta Sì-Unipol Banca (Italy)"),
-    ("4xxx9x144046xxxx","Visa-Carta Sì-Banco di Sardegna (Italy)"),
-    ("4xxx9xxx40xxxxxx","Visa-Carta Sì (Italy)"),
-    ("4532xxxxxxxxxxxx", "Visa-Credito Italiano (Italy)"),
-    ("454759000xxxxxxx","Visa Gold-bankganadero BBV (Colombia)"),
-    ("4916xxxxxxxxxxxx", "Visa-MBNA Bank"),
     ("4xxxxxxxxxxxxxx", "Visa"),
-    ("4xxxxxxxxxxxxxxx","Visa"),
-    ("5031xxxxxxxxxxxx", "MasterCard-Maryland of North America"),
-    ("5100xxxxxxxxxxxx", "MasterCard-Southwestern States Bankard Association"),
-    ("5110xxxxxxxxxxxx", "MasterCard-Universal Travel Voucher"),
-    ("5120xxxxxxxxxxxx", "MasterCard-Western States Bankard Association"),
-    ("5130xxxxxxxxxxxx", "MasterCard-Eurocard France"),
-    ("5140xxxxxxxxxxxx", "MasterCard-Mountain States Bankard Association"),
-    ("5150xxxxxxxxxxxx", "MasterCard-Credit Systems Inc."),
-    ("5160xxxxxxxxxxxx", "MasterCard-Westpac Banking Corporation"),
-    ("5170xxxxxxxxxxxx", "MasterCard-Midamerica Bankard Association"),
-    ("5172xxxxxxxxxxxx", "MasterCard-First Bank Card Center"),
-    ("518xxxxxxxxxxxxxxx","MasterCard-Computer Communications of America"),
-    ("519xxxxxxxxxxxxxxx","MasterCard-Bank of Montreal"),
-    ("5201xxxxxxxxxxxx", "MasterCard-Mellon Bank N.A."),
-    ("5202xxxxxxxxxxxx", "MasterCard-Central Trust Company N.A."),
-    ("5204xxxxxxxxxxxx", "MasterCard-Security Pacific National Bank"),
-    ("5205xxxxxxxxxxxx", "MasterCard-Promocion y Operacion S.A."),
-    ("5206xxxxxxxxxxxx", "MasterCard-Banco Nacional do Mexico"),
-    ("5207xxxxxxxxxxxx", "MasterCard-New England Bankard Association"),
-    ("5208xxxxxxxxxxxx", "MasterCard-Million Card Service Co. Ltd."),
-    ("5209xxxxxxxxxxxx", "MasterCard-The Citizens & Southern National Bank"),
-    ("5210xxxxxxxxxxxx", "MasterCard-Kokumai Shinpan Company Ltd."),
-    ("5211xxxxxxxxxxxx", "MasterCard-Chemical Bank Delaware"),
-    ("5212xxxxxxxxxxxx", "MasterCard-F.C.C. National Bank"),
-    ("5213xxxxxxxxxxxx", "MasterCard-The Bankcard Association Inc."),
-    ("5215xxxxxxxxxxxx", "MasterCard-Marine Midland Bank N.A."),
-    ("5216xxxxxxxxxxxx", "MasterCard-Old Kent Bank & Trust Co."),
-    ("5217xxxxxxxxxxxx", "MasterCard-Union Trust"),
-    ("5218xxxxxxxxxxxx", "MasterCard-Citibank/Citicorp"),
-    ("5219xxxxxxxxxxxx", "MasterCard-Central Finance Co. Ltd."),
-    ("5220xxxxxxxxxxxx", "MasterCard-Sovran Bank/Central South"),
-    ("5221xxxxxxxxxxxx", "MasterCard-Standard Bank of South Africa Ltd."),
-    ("5222xxxxxxxxxxxx", "MasterCard-Security Bank & Trust Company"),
-    ("5223xxxxxxxxxxxx", "MasterCard-Trustmark National Bank"),
-    ("5224xxxxxxxxxxxx", "MasterCard-Midland Bank"),
-    ("5225xxxxxxxxxxxx", "MasterCard-First Pennsylvania Bank N.A."),
-    ("5226xxxxxxxxxxxx", "MasterCard-Eurocard Ab"),
-    ("5227xxxxxxxxxxxx", "MasterCard-Rocky Mountain Bankcard System Inc."),
-    ("5228xxxxxxxxxxxx", "MasterCard-First Union National Bank of North Carolina"),
-    ("5229xxxxxxxxxxxx", "MasterCard-Sunwest Bank of Albuquerque N.A."),
-    ("5230xxxxxxxxxxxx", "MasterCard-Harris Trust & Savings Bank"),
-    ("5231xxxxxxxxxxxx", "MasterCard-Badische Beamtenbank EG"),
-    ("5232xxxxxxxxxxxx", "MasterCard-Eurocard Deutschland"),
-    ("5233xxxxxxxxxxxx", "MasterCard-Computer Systems Association Inc."),
-    ("5234xxxxxxxxxxxx", "MasterCard-Citibank Arizona"),
-    ("5235xxxxxxxxxxxx", "MasterCard-Financial Transaction System Inc."),
-    ("5236xxxxxxxxxxxx", "MasterCard-First Tennessee Bank N.A."),
-    ("5254xxxxxxxxxxxx", "MasterCard-Bank of America"),
-    ("5273xxxxxxxxxxxx", "MasterCard(can be Gold)-Bank of America"),
-    ("5286xxxxxxxxxxxx", "MasterCard-Home Federal"),
-    ("5291xxxxxxxxxxxx", "MasterCard-Signet Bank"),
-    ("5329xxxxxxxxxxxx", "MasterCard-Signet Bank"),
-    ("533875xxxxxxxxxx", "MasterCard Prepaid-PayPal / Lottomatica (Italy)"),
-    ("5410xxxxxxxxxxxx", "MasterCard-Wells Fargo"),
-    ("5412xxxxxxxxxxxx", "MasterCard-Wells Fargo"),
-    ("5419xxxxxxxxxxxx", "MasterCard-Bank of Hoven"),
-    ("5424xxxxxxxxxxxx", "MasterCard-Bank of Hoven"),
-    ("543013xxxxxxxxxx", "MasterCard-BNL/BNP Paribas (Italy)"),
-    ("5434xxxxxxxxxxxx", "MasterCard-National Westminster Bank"),
-    ("5465xxxxxxxxxxxx", "MasterCard-Chase Manhattan"),
-    ("525501140xxxxxxx","MasterCard-Banco di Sardegna (Italy)"),
-    ("530693xxxxxxxxxx", "MasterCard-Bancolombia Cadenalco (Colombia)"),
-    ("540625xxxxxxxxx", "MasterCard-Banco de Occidente (Colombia)"),
-    ("5426xxxxxxxxxxxx", "MasterCard-Granahorrrar (Colombia)"),
-    ("5406xxxxxxxxxxxx", "MasterCard-Granahorrrar (Colombia)"),
-    ("581149xxxxxxxxxx", "Maestro-BNL/BNP Paribas (Italy)"),
-    ("5xxxxxxxxxxxxxxx","MasterCard/Access/Eurocard"),
-    ("6013xxxxxxxxxxxx", "Discover-MBNA Bank"),
+    ("5xxxxxxxxxxxxxxx", "MasterCard/Access/Eurocard"),
     ("60xxxxxxxxxxxxxx", "Discover"),
 ]
 
-# --- LÓGICA DE APOYO ---
+# --- LÓGICA DE APOYO (ORIGINAL) ---
 
 def chk_card(numero):
     numero_limpio = ''.join(c for c in str(numero) if c.isdigit())
@@ -245,10 +64,10 @@ def generar_cvv(red):
     if "amex" in red.lower(): return str(random.randint(1000, 9998))
     return str(random.randint(112, 998))
 
-# --- LÓGICA XTR / XTP ---
+# --- LÓGICA DE EXTRACCIÓN (XTP) ---
 
 def calcular_logicas(cc1, cc2):
-    # Lógica XTP 1
+    # --- Lógica XTP 1 ---
     cc_edit = []
     for x in [cc1, cc2]:
         lista = list(x)
@@ -266,11 +85,12 @@ def calcular_logicas(cc1, cc2):
     xtp1 = str(cc_edit[0])[:8] + str(res1)
     xtp1 = xtp1 + ('x' * (len(cc1) - len(xtp1)))
 
-    # Lógica XTP 2
+    # --- Lógica XTP 2 ---
     try:
         res_list = [int(a) * int(b) for a, b in zip(cc2[8:], cc2[:8])]
         res2_str = "".join(str(x) for x in res_list)
         cc2_fake = cc2[:8] + res2_str[:8]
+        
         xtp2_list = [None] * len(cc1)
         for i in range(len(cc1)):
             if i < len(cc2_fake) and cc1[i] == cc2_fake[i]:
@@ -279,7 +99,7 @@ def calcular_logicas(cc1, cc2):
                 xtp2_list[i] = 'x'
         xtp2 = "".join(xtp2_list)
     except:
-        xtp2 = "Error_Cálculo"
+        xtp2 = "Error_en_calculo"
     
     return xtp1, xtp2
 
@@ -287,7 +107,7 @@ def calcular_logicas(cc1, cc2):
 user_settings = {}
 user_history = {}
 
-# --- PROCESADOR CENTRAL ---
+# --- PROCESADORES CENTRALES ---
 
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
@@ -321,49 +141,53 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
 # --- HANDLERS ---
 
 async def xtr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    parts = update.message.text.split(maxsplit=1)
-    if len(parts) < 2:
-        await update.message.reply_text("❌ Uso: `.xtr 5431...|09|26|199 5431...|...`")
-        return
-    
-    # Extraer solo los números de tarjeta (asumiendo longitud de 15 o 16)
-    # Separamos por espacios o cualquier caracter no numérico largo
+    raw_text = update.message.text
+    # Extraer solo los números de 15 o 16 dígitos (posibles tarjetas)
     import re
-    raw_input = parts[1]
-    # Buscamos bloques de al menos 15 dígitos
-    lista_cc = re.findall(r'\d{15,16}', raw_input)
-
-    if len(lista_cc) < 2:
-        await update.message.reply_text("❌ Se requieren al menos 2 tarjetas válidas.")
+    # Buscamos bloques de números largos (ignorando separadores | / etc)
+    all_numbers = re.findall(r'\b\d{15,16}\b', raw_text)
+    
+    if len(all_numbers) < 2:
+        await update.message.reply_text("❌ Se requieren al menos 2 tarjetas para extraer.")
         return
 
-    msg_espera = await update.message.reply_text("🔍 Analizando patrones...")
+    msg_espera = await update.message.reply_text(f"🔍 Analizando {len(all_numbers)} CCs...")
     
     resultados_xtp1 = []
     resultados_xtp2 = []
-    combinaciones = list(permutations(lista_cc, 2))
+    origen_xtp1 = {}
+    origen_xtp2 = {}
+
+    combinaciones = list(permutations(all_numbers, 2))
 
     for c1, c2 in combinaciones:
         x1, x2 = calcular_logicas(c1, c2)
+        
         resultados_xtp1.append(x1)
+        if x1 not in origen_xtp1: origen_xtp1[x1] = (c1, c2)
+            
         resultados_xtp2.append(x2)
+        if x2 not in origen_xtp2: origen_xtp2[x2] = (c1, c2)
 
-    top_xtp1 = Counter(resultados_xtp1).most_common(3)
-    top_xtp2 = Counter(resultados_xtp2).most_common(3)
+    def build_top_text(titulo, emoji, lista_res, mapa_origen):
+        conteo = Counter(lista_res)
+        tops = conteo.most_common(10)
+        txt = f"{emoji} **{titulo}**\n`RESULTADO           | REP | GEN` \n"
+        for res, veces in tops:
+            c1, c2 = mapa_origen.get(res)
+            # Acortar origen para que quepa en pantalla de Telegram
+            txt += f"`{res:<18} | {veces:<3} | {c1[-4:]}&{c2[-4:]}`\n"
+        return txt
 
-    texto_res = f"🧬 **Extracción de Patrones** ({len(lista_cc)} CCs)\n\n"
-    texto_res += "🏆 **TOP XTP 1:**\n"
-    for res, cant in top_xtp1:
-        texto_res += f"└ `{res}` ({cant}x)\n"
-    
-    texto_res += "\n🏆 **TOP XTP 2:**\n"
-    for res, cant in top_xtp2:
-        texto_res += f"└ `{res}` ({cant}x)\n"
+    res_final = f"🧪 **EXTRACCIÓN COMPLETADA**\n"
+    res_final += f"Permutaciones: {len(combinaciones)}\n\n"
+    res_final += build_top_text("RANKING XTP 1", "🟦", resultados_xtp1, origen_xtp1)
+    res_final += "\n" + build_top_text("RANKING XTP 2", "🟩", resultados_xtp2, origen_xtp2)
 
-    await msg_espera.edit_text(texto_res, parse_mode='Markdown')
+    await msg_espera.edit_text(res_final, parse_mode='Markdown')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot Activo.\nUsa `.gen`, `.xtr`, `.rep`, `.repu` o `.cant`.")
+    await update.message.reply_text("🤖 Bot Activo.\nComandos: `.gen`, `.ggen`, `.rep`, `.repu`, `.cant`, `.xtr`, `.dep`.")
 
 async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -426,7 +250,22 @@ async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("❌ Error al eliminar.")
 
+# Lista de links que quieres mostrar
+LINKS = [
+    "https://asociar.qzz.io/",
+    "https://elit3signal.com/",
+    "https://shop.nirvana.com/checkouts/cn/hWN79ih1uiCkeTLcld2Nd6yf/en-mx?_r=AQABwKyHwhFXNqz_h10JDN_NX6EH0exGABf7K8JWjjZMGqs&auto_redirect=false&edge_redirect=true&skip_shop_pay=true",
+    "https://www.gardenweasel.com/checkouts/cn/hWN8konY7ytgeNEMm9Itx1l3/en-us?_r=AQABEqtN8qEpBNMN0upFoVlprgfgf3ZIjAewF-t5rWnpPlE&skip_shop_pay=true"
+]
+
+async def send_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.text == ".lnk":
+        links_text = "\n".join(LINKS)
+        await update.message.reply_text(
+            f"🔗 Aquí tienes los links:\n\n{links_text}"
+        )
 if __name__ == '__main__':
+    # Reemplaza con tu TOKEN real
     TOKEN = "8613878245:AAGvV4lcztveZGwZ-iMIWEcgZ8sc2dzdSCY"
     app = ApplicationBuilder().token(TOKEN).build()
     
@@ -434,11 +273,12 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler)) # Nuevo comando .xtr
     app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_links))
     app.add_error_handler(error_handler)
     
-    print("Bot ACTIVO con soporte XTR")
+    print("Bot ACTIVO")
     app.run_polling()
