@@ -281,7 +281,7 @@ async def send_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔗 Aquí tienes los links:\n\n{links_text}"
         )
 def run_bot():
-    TOKEN = os.getenv("BOT_TOKEN")
+    TOKEN = os.getenv("8613878245:AAGfTjdnjDJOUtAbqVJkiXZZweguYc_ykyw")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
@@ -296,7 +296,7 @@ def run_bot():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_links))
     app.add_error_handler(error_handler)
 
-    print("Bot ACTIVO con XTP")
+    print("Bot ACTIVO")
 
     app.run_polling()
     
