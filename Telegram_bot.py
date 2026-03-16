@@ -281,7 +281,7 @@ async def send_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔗 Aquí tienes los links:\n\n{links_text}"
         )
 def run_bot():
-    TOKEN = os.getenv("8613878245:AAGfTjdnjDJOUtAbqVJkiXZZweguYc_ykyw")
+    TOKEN = os.getenv("BOT_TOKEN")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
