@@ -8,6 +8,16 @@ from collections import Counter
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
+
+from flask import Flask
+import threading
+
+web_app = Flask(__name__)
+
+@web_app.route("/")
+def home():
+    return "Bot activo"
+
 # Configuración de Logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -270,20 +280,31 @@ async def send_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"🔗 Aquí tienes los links:\n\n{links_text}"
         )
+def run_bot():
+    TOKEN = os.getenv("BOT_TOKEN")
 
-if __name__ == '__main__':
-    TOKEN = "8613878245:AAGvV4lcztveZGwZ-iMIWEcgZ8sc2dzdSCY"
     app = ApplicationBuilder().token(TOKEN).build()
-    
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]repu'), repu_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]rep'), rep_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]cant'), set_cant))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]gen'), gen_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]ggen'), ggen_handler))
-    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler)) # NUEVO COMANDO
+    app.add_handler(MessageHandler(filters.Regex(r'^[./]xtr'), xtr_handler))
     app.add_handler(MessageHandler(filters.Regex(r'^[./]dep'), dep_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_links))
     app.add_error_handler(error_handler)
+
     print("Bot ACTIVO con XTP")
+
     app.run_polling()
+    
+if __name__ == "__main__":
+    
+    # correr el bot en segundo plano
+    threading.Thread(target=run_bot).start()
+
+    # abrir puerto para Render
+    port = int(os.environ.get("PORT", 10000))
+    web_app.run(host="0.0.0.0", port=port)
