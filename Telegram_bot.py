@@ -8,6 +8,79 @@ from collections import Counter
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
+import sqlite3
+import json
+# =========================
+# DATABASE
+# =========================
+
+conn = sqlite3.connect("bot_data.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id TEXT PRIMARY KEY,
+    settings TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_history (
+    user_id TEXT PRIMARY KEY,
+    history TEXT
+)
+""")
+
+conn.commit()
+
+
+# =========================
+# LOAD DATA
+# =========================
+
+def load_user_settings():
+    data = {}
+    cursor.execute("SELECT * FROM user_settings")
+
+    for user_id, settings in cursor.fetchall():
+        data[user_id] = json.loads(settings)
+
+    return data
+
+
+def load_user_history():
+    data = {}
+    cursor.execute("SELECT * FROM user_history")
+
+    for user_id, history in cursor.fetchall():
+        data[user_id] = json.loads(history)
+
+    return data
+
+
+# =========================
+# SAVE DATA
+# =========================
+
+def save_user_settings(user_id, settings):
+
+    cursor.execute(
+        "INSERT OR REPLACE INTO user_settings VALUES (?, ?)",
+        (user_id, json.dumps(settings))
+    )
+
+    conn.commit()
+
+
+def save_user_history(user_id, history):
+
+    cursor.execute(
+        "INSERT OR REPLACE INTO user_history VALUES (?, ?)",
+        (user_id, json.dumps(history))
+    )
+
+    conn.commit()
+
 
 from flask import Flask
 import threading
@@ -114,8 +187,8 @@ def calcular_logicas_xtp(cc1, cc2):
     return xtp1, xtp2
 
 # --- VARIABLES DE ESTADO ---
-user_settings = {}
-user_history = {}
+user_settings = load_user_settings()
+user_history = load_user_history()
 
 # --- PROCESADORES ---
 
@@ -194,7 +267,7 @@ async def xtr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, (res, veces) in enumerate(top1, 1):
         c1, c2 = origen_xtp1[res]
         txt_xtp1 += f"{i}. `{res}`\n"
-        txt_xtp1 += f"  ` (Rep: {veces}) ({c1} & {c2}) `\n"
+        txt_xtp1 += f"🔵 **Rep {veces}** → {c1} & {c2}\n"
 
     # Formatear Top 10 XTP 2
     top2 = Counter(res_xtp2).most_common(10)
@@ -202,7 +275,7 @@ async def xtr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, (res, veces) in enumerate(top2, 1):
         c1, c2 = origen_xtp2[res]
         txt_xtp2 += f"{i}. `{res}`\n"
-        txt_xtp2 += f"  ` (Rep: {veces}) ({c1} & {c2}) `\n"
+        txt_xtp2 += f"🟢 **Rep {veces}** → {c1} & {c2}\n"
 
     final_msg = f"✅ **Extracción Finalizada** ({len(combinaciones)} perms)\n\n" + txt_xtp1 + txt_xtp2
     await msg_analizando.edit_text(final_msg, parse_mode='Markdown')
